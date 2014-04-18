@@ -57,8 +57,10 @@ function TunnelingAgent(options) {
         // Detect the request to connect same origin server,
         // reuse the connection.
         self.requests.splice(i, 1)
-        pending.request.onSocket(socket)
-        return
+        if (!pending.request._aborted) {
+          pending.request.onSocket(socket)
+          return
+        }
       }
     }
     socket.destroy()
@@ -96,7 +98,12 @@ TunnelingAgent.prototype.createConnection = function createConnection(pending) {
     socket.on('free', onFree)
     socket.on('close', onCloseOrRemove)
     socket.on('agentRemove', onCloseOrRemove)
-    pending.request.onSocket(socket)
+
+    if (pending.request._aborted) {
+      onFree()
+    } else {
+      pending.request.onSocket(socket)
+    }
 
     function onFree() {
       self.emit('free', socket, pending.host, pending.port)
